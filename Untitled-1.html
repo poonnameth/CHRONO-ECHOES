@@ -1,0 +1,1280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrono Echoes: Shadow of Time - Tactical Turn-Based RPG</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Exo+2:wght@400;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        chrono: {
+                            gold: '#fbbf24',
+                            cyan: '#06b6d4',
+                            purple: '#8b5cf6',
+                            dark: '#0b0f19',
+                            card: '#111827',
+                            accent: '#38bdf8'
+                        }
+                    },
+                    fontFamily: {
+                        title: ['Cinzel', 'serif'],
+                        body: ['Exo 2', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #05070c;
+            color: #e2e8f0;
+            font-family: 'Exo 2', sans-serif;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Custom Holographic & Dark Fantasy Glows */
+        .chrono-glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 10px rgba(6, 182, 212, 0.2);
+        }
+        .chrono-glow-gold {
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4), inset 0 0 10px rgba(251, 191, 36, 0.2);
+        }
+        .chrono-glow-purple {
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4), inset 0 0 10px rgba(139, 92, 246, 0.2);
+        }
+        .border-glow {
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+        .border-glow:hover {
+            border-color: rgba(56, 189, 248, 0.8);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+        }
+
+        /* Scanline effect overlay */
+        .scanline-bg {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b0f19; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between overflow-hidden bg-chrono-dark text-slate-200">
+
+    <!-- Audio Synthesizer Toggle & Relic Selection Overlay Modal -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-cyan-500/40 rounded-xl max-w-2xl w-full p-6 shadow-2xl relative">
+            <h2 class="font-title text-3xl text-center text-cyan-400 font-bold mb-2 tracking-wider">CHRONO ECHOES</h2>
+            <p class="text-center text-xs text-slate-400 mb-6 uppercase tracking-widest">Shadow of Time • Tactical GDD Prototype</p>
+
+            <!-- Relic Selection -->
+            <div id="relic-selection-step">
+                <h3 class="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-hourglass-start text-amber-400"></i> Select Chrono Relic Artifact
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    <div onclick="selectRelic('sands')" id="relic-sands" class="relic-card border border-slate-700 bg-slate-800/60 hover:bg-cyan-950/40 p-4 rounded-lg cursor-pointer transition border-glow">
+                        <div class="text-amber-400 text-2xl mb-1"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <h4 class="font-bold text-slate-200 text-sm">Sands of Eternity</h4>
+                        <p class="text-xs text-slate-400 mt-1">Echo duration +1 Turn. Echo Sync attacks deal +25% extra Damage.</p>
+                    </div>
+                    <div onclick="selectRelic('dial')" id="relic-dial" class="relic-card border border-slate-700 bg-slate-800/60 hover:bg-cyan-950/40 p-4 rounded-lg cursor-pointer transition border-glow">
+                        <div class="text-cyan-400 text-2xl mb-1"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <h4 class="font-bold text-slate-200 text-sm">Paradox Dial</h4>
+                        <p class="text-xs text-slate-400 mt-1">When Paradox triggers upon Echo death, reflect 150% damage to all enemies.</p>
+                    </div>
+                    <div onclick="selectRelic('warp')" id="relic-warp" class="relic-card border border-slate-700 bg-slate-800/60 hover:bg-cyan-950/40 p-4 rounded-lg cursor-pointer transition border-glow">
+                        <div class="text-purple-400 text-2xl mb-1"><i class="fa-solid fa-bolt-lightning"></i></div>
+                        <h4 class="font-bold text-slate-200 text-sm">Warp Crystal</h4>
+                        <p class="text-xs text-slate-400 mt-1">Unlock instant swap position ability with active Echo and restore 20 AP.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 p-4 rounded-lg border border-slate-800 text-xs text-slate-300 mb-6 space-y-1">
+                    <div class="font-bold text-cyan-400 mb-1 flex items-center gap-1">
+                        <i class="fa-solid fa-circle-info"></i> Core Mechanic: The Echo System
+                    </div>
+                    <p>• <strong>Turn N:</strong> Hero actions (Move/Attack) are logged into Temporal Memory.</p>
+                    <p>• <strong>Turn N+1:</strong> Click <span class="text-cyan-300 font-semibold">"Summon Echo"</span> to spawn a Ghost Replica of past actions.</p>
+                    <p>• <strong>Sync Combo:</strong> Attack alongside Echoes for massive Overlap Damage!</p>
+                    <p class="text-rose-400">• <strong>Paradox Danger:</strong> If Echo is destroyed before acting, Paradox deals recoil damage.</p>
+                </div>
+
+                <button onclick="startGame()" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-title font-bold py-3 rounded-lg shadow-lg shadow-cyan-900/40 tracking-wider text-sm uppercase transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> Initiate Timeline Battle
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Container -->
+    <div class="h-full w-full flex flex-col justify-between relative overflow-hidden">
+        
+        <!-- TOP TIMELINE & BATTLE STATUS HEADER -->
+        <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-2 flex items-center justify-between z-20 backdrop-blur-sm">
+            <!-- Game Title & Stage -->
+            <div class="flex items-center gap-3">
+                <div class="font-title font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-amber-300 text-lg">
+                    CHRONO ECHOES
+                </div>
+                <div class="text-xs px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-300 flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="stage-name-display">Stage 1: Chronos Anomaly</span>
+                </div>
+            </div>
+
+            <!-- Turn Order / Timeline Indicator -->
+            <div class="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
+                <div class="text-xs font-semibold text-cyan-400 uppercase tracking-wider mr-2 flex items-center gap-1">
+                    <i class="fa-solid fa-timeline"></i> Turn Order:
+                </div>
+                <div id="timeline-queue" class="flex items-center gap-1.5 overflow-x-auto">
+                    <!-- Dynamic Turn Badges inserted via JS -->
+                </div>
+            </div>
+
+            <!-- Battle Controls & Sound -->
+            <div class="flex items-center gap-2">
+                <div class="text-xs text-amber-400 bg-amber-950/40 px-3 py-1 rounded border border-amber-800/60 font-semibold" id="relic-active-badge">
+                    Relic: None
+                </div>
+                <button onclick="toggleAudio()" id="btn-audio" class="p-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition" title="Toggle Sound FX">
+                    <i class="fa-solid fa-volume-high"></i>
+                </button>
+                <button onclick="restartBattle()" class="px-3 py-1 rounded bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 text-xs font-semibold transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+            </div>
+        </header>
+
+        <!-- MIDDLE CONTENT: CANVAS ARENA & UNIT INSPECTOR SIDEBAR -->
+        <div class="flex-1 flex relative overflow-hidden">
+            
+            <!-- CANVAS ARENA -->
+            <main class="flex-1 relative flex items-center justify-center p-2">
+                <canvas id="gameCanvas" class="rounded-xl border border-slate-800 shadow-2xl bg-slate-950 max-w-full max-h-full"></canvas>
+                <div class="scanline-bg absolute inset-0 rounded-xl pointer-events-none"></div>
+
+                <!-- Floating Combat Overlay Canvas Text simulation container -->
+                <div id="floating-text-container" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+            </main>
+
+            <!-- RIGHT SIDEBAR: UNIT STATUS & PARADOX MONITOR -->
+            <aside class="w-80 bg-slate-900/90 border-l border-slate-800 p-4 flex flex-col justify-between z-10 backdrop-blur-md">
+                <!-- Selected / Active Unit Details -->
+                <div>
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                        <i class="fa-solid fa-user-gear text-cyan-400"></i> Active Unit Diagnostics
+                    </h3>
+
+                    <div id="active-unit-card" class="bg-slate-950 border border-cyan-500/30 rounded-xl p-3 mb-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span id="unit-icon" class="text-xl text-cyan-400">🛡️</span>
+                                <div>
+                                    <div id="unit-name" class="font-title font-bold text-slate-100 text-sm">Valen</div>
+                                    <div id="unit-role" class="text-[10px] text-cyan-400 font-semibold uppercase">Temporal Striker</div>
+                                </div>
+                            </div>
+                            <span id="unit-turn-badge" class="px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 font-bold border border-cyan-700">YOUR TURN</span>
+                        </div>
+
+                        <!-- HP Bar -->
+                        <div class="mb-2">
+                            <div class="flex justify-between text-[11px] mb-0.5 font-semibold">
+                                <span class="text-slate-400">HEALTH</span>
+                                <span id="unit-hp-text" class="text-emerald-400">120 / 120</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                <div id="unit-hp-bar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300" style="width: 100%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Temporal Shield Bar -->
+                        <div class="mb-2">
+                            <div class="flex justify-between text-[11px] mb-0.5 font-semibold">
+                                <span class="text-slate-400">TEMPORAL SHIELD</span>
+                                <span id="unit-shield-text" class="text-amber-400">0</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                                <div id="unit-shield-bar" class="h-full bg-amber-400 transition-all duration-300" style="width: 0%;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Action Points (AP) -->
+                        <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/80">
+                            <span class="text-slate-400">Action Points (AP):</span>
+                            <span id="unit-ap-text" class="text-amber-300 font-bold">2 / 2</span>
+                        </div>
+                    </div>
+
+                    <!-- Echo Stream Monitor -->
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 mb-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-semibold text-purple-400 flex items-center gap-1">
+                                <i class="fa-solid fa-ghost"></i> Echo Record Buffer
+                            </span>
+                            <span id="echo-count-badge" class="text-[10px] bg-purple-950 text-purple-300 px-1.5 py-0.5 rounded border border-purple-800">0 Recorded</span>
+                        </div>
+                        <div id="echo-log-list" class="space-y-1 max-h-28 overflow-y-auto pr-1 text-[11px]">
+                            <!-- Dynamic recorded actions logged here -->
+                            <div class="text-slate-500 italic text-center py-2">No past actions recorded in turn history.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategic Log & Paradox Threat Level -->
+                <div>
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 mb-2">
+                        <div class="flex items-center justify-between text-[11px] font-semibold mb-1">
+                            <span class="text-rose-400 flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> Paradox Recoil Risk</span>
+                            <span id="paradox-risk-val" class="text-rose-400">LOW</span>
+                        </div>
+                        <p class="text-[10px] text-slate-400 leading-tight">Destroying an Echo causes temporal paradox recoil damage to main units.</p>
+                    </div>
+
+                    <div id="combat-log" class="h-28 bg-slate-950/80 border border-slate-800 rounded-lg p-2 text-[10px] text-slate-300 overflow-y-auto space-y-1 font-mono">
+                        <div class="text-cyan-400 font-semibold">[SYSTEM]: Chrono Battle Grid Initialized.</div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+
+        <!-- BOTTOM ACTION COMMAND PANEL -->
+        <footer class="bg-slate-900 border-t border-slate-800 p-3 z-20">
+            <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+                
+                <!-- Unit Switcher Shortcuts -->
+                <div id="hero-party-bar" class="flex items-center gap-2">
+                    <!-- Dynamic Hero portrait buttons -->
+                </div>
+
+                <!-- Core Action Buttons -->
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="btn-move" onclick="setActionState('move')" class="action-btn px-4 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold uppercase tracking-wider text-slate-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-shoe-prints text-cyan-400"></i> Move (1 AP)
+                    </button>
+
+                    <button id="btn-attack" onclick="setActionState('attack')" class="action-btn px-4 py-2.5 rounded-lg bg-rose-950/80 hover:bg-rose-900 border border-rose-700 text-xs font-bold uppercase tracking-wider text-rose-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-crosshairs text-rose-400"></i> Basic Attack (1 AP)
+                    </button>
+
+                    <button id="btn-skill" onclick="setActionState('skill')" class="action-btn px-4 py-2.5 rounded-lg bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700 text-xs font-bold uppercase tracking-wider text-indigo-200 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-wand-magic-sparkles text-indigo-400"></i> Class Skill (2 AP)
+                    </button>
+
+                    <!-- UNIQUE SIGNATURE ECHO SUMMON BUTTON -->
+                    <button id="btn-summon-echo" onclick="triggerSummonEcho()" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-purple-700 to-cyan-600 hover:from-purple-600 hover:to-cyan-500 border border-purple-400 text-xs font-title font-extrabold uppercase tracking-widest text-white shadow-lg shadow-purple-900/50 transition transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2">
+                        <i class="fa-solid fa-ghost text-amber-300 animate-bounce"></i> Summon Echo (1 AP)
+                    </button>
+
+                    <!-- RELIC ACTIVE SKILL BUTTON -->
+                    <button id="btn-relic-skill" onclick="triggerRelicAbility()" class="px-3.5 py-2.5 rounded-lg bg-amber-950/80 hover:bg-amber-900 border border-amber-600 text-xs font-bold uppercase text-amber-300 transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-hourglass-start"></i> Relic Skill
+                    </button>
+
+                    <button onclick="endTurn()" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-xs font-title font-bold uppercase tracking-wider text-white shadow-md transition flex items-center gap-1.5">
+                        End Turn <i class="fa-solid fa-forward"></i>
+                    </button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- GAME CODE JAVASCRIPT -->
+    <script>
+        /* ==========================================================================
+           AUDIO SYNTHESIZER (WEB AUDIO API)
+           ========================================================================== */
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+            playTone(freq, type, duration, startVol = 0.2, endVol = 0) {
+                if (!this.enabled) return;
+                this.init();
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(startVol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(Math.max(endVol, 0.0001), this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch(e){}
+            }
+            playAttack() {
+                this.playTone(220, 'sawtooth', 0.15, 0.3);
+                setTimeout(() => this.playTone(110, 'square', 0.2, 0.2), 50);
+            }
+            playEchoSummon() {
+                if (!this.enabled) return;
+                this.init();
+                // Rising frequency rewind sound effect
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(1200, this.ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.4);
+                }catch(e){}
+            }
+            playParadox() {
+                this.playTone(80, 'sawtooth', 0.4, 0.4);
+                setTimeout(() => this.playTone(50, 'square', 0.3, 0.3), 100);
+            }
+            playSkill() {
+                this.playTone(523.25, 'sine', 0.3, 0.25);
+                setTimeout(() => this.playTone(659.25, 'sine', 0.3, 0.25), 100);
+            }
+            playHeal() {
+                this.playTone(440, 'triangle', 0.3, 0.2);
+                setTimeout(() => this.playTone(880, 'triangle', 0.4, 0.2), 150);
+            }
+        }
+        const sfx = new SoundFX();
+
+        function toggleAudio() {
+            sfx.enabled = !sfx.enabled;
+            const btn = document.getElementById('btn-audio');
+            btn.innerHTML = sfx.enabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark text-rose-400"></i>';
+        }
+
+        /* ==========================================================================
+           GAME STATE & CONSTANTS
+           ========================================================================== */
+        const GRID_COLS = 8;
+        const GRID_ROWS = 6;
+        let TILE_SIZE = 80;
+
+        let canvas, ctx;
+        let selectedRelic = 'sands';
+        let currentStage = 1;
+
+        // Current Action Mode: 'none', 'move', 'attack', 'skill'
+        let currentActionMode = 'none';
+
+        // Turn System
+        let turnQueue = [];
+        let activeUnitIndex = 0;
+
+        // Action Memory Logging for Echoes: stores [{unitId, actionType, targetTile, timeTurn}]
+        let temporalActionLog = [];
+
+        // Dynamic Particles Array for Canvas Rendering
+        let particles = [];
+        let floatingTexts = [];
+
+        /* ==========================================================================
+           UNIT DATA STRUCTURE (4 HEROS & ENEMIES)
+           ========================================================================== */
+        const HERO_CLASSES = {
+            striker: {
+                name: "Valen",
+                role: "Temporal Striker",
+                icon: "⚔️",
+                maxHp: 120,
+                atk: 32,
+                color: "#38bdf8", // Cyan
+                skillName: "Chronoblade Rush",
+                skillDesc: "High DPS strike dealing 50 damage + grants 1 bonus AP.",
+                skillCost: 2
+            },
+            vanguard: {
+                name: "Aethel Guard",
+                role: "Chrono Vanguard",
+                icon: "🛡️",
+                maxHp: 180,
+                atk: 22,
+                color: "#fbbf24", // Gold
+                skillName: "Temporal Aegis",
+                skillDesc: "Converts recent damage taken into party Shield (40 HP).",
+                skillCost: 2
+            },
+            weaver: {
+                name: "Aether Weaver",
+                role: "Aether Weaver",
+                icon: "🔮",
+                maxHp: 100,
+                atk: 26,
+                color: "#a855f7", // Purple
+                skillName: "Stasis Freeze",
+                skillDesc: "Freezes target enemy, skipping their next turn.",
+                skillCost: 2
+            },
+            mender: {
+                name: "Void Mender",
+                role: "Void Mender",
+                icon: "🌿",
+                maxHp: 110,
+                atk: 18,
+                color: "#34d399", // Emerald
+                skillName: "Rewind Status",
+                skillDesc: "Rewinds all party members' HP by +40 Health.",
+                skillCost: 2
+            }
+        };
+
+        let units = [];
+
+        class Unit {
+            constructor(id, name, isEnemy, col, row, classKey = null) {
+                this.id = id;
+                this.name = name;
+                this.isEnemy = isEnemy;
+                this.isEcho = false;
+                this.col = col;
+                this.row = row;
+                
+                if (!isEnemy && classKey) {
+                    const template = HERO_CLASSES[classKey];
+                    this.classKey = classKey;
+                    this.role = template.role;
+                    this.icon = template.icon;
+                    this.maxHp = template.maxHp;
+                    this.hp = template.maxHp;
+                    this.atk = template.atk;
+                    this.color = template.color;
+                    this.skillName = template.skillName;
+                    this.skillDesc = template.skillDesc;
+                } else {
+                    // Enemy Unit Setup
+                    this.role = "Shadow Echo Enemy";
+                    this.icon = isEnemy === 'boss' ? "👑" : "👾";
+                    this.maxHp = isEnemy === 'boss' ? 350 : 90;
+                    this.hp = this.maxHp;
+                    this.atk = isEnemy === 'boss' ? 28 : 18;
+                    this.color = isEnemy === 'boss' ? "#f43f5e" : "#e11d48";
+                }
+
+                this.maxAp = 2;
+                this.ap = 2;
+                this.shield = 0;
+                this.isFrozen = false;
+                this.recordedActions = [];
+            }
+        }
+
+        /* ==========================================================================
+           INITIALIZATION & SETUP
+           ========================================================================== */
+        window.onload = function() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // Canvas Click Event Listener
+            canvas.addEventListener('click', handleCanvasClick);
+
+            // Default Relic highlight
+            selectRelic('sands');
+        };
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const maxWidth = container.clientWidth - 20;
+            const maxHeight = container.clientHeight - 20;
+
+            // Maintain 8:6 aspect ratio
+            let width = maxWidth;
+            let height = width * (6 / 8);
+
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * (8 / 6);
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+            TILE_SIZE = canvas.width / GRID_COLS;
+        }
+
+        function selectRelic(type) {
+            selectedRelic = type;
+            document.querySelectorAll('.relic-card').forEach(c => {
+                c.classList.remove('border-cyan-400', 'bg-cyan-950/40');
+            });
+            const selectedElem = document.getElementById(`relic-${type}`);
+            if(selectedElem) {
+                selectedElem.classList.add('border-cyan-400', 'bg-cyan-950/40');
+            }
+        }
+
+        function startGame() {
+            document.getElementById('modal-overlay').classList.add('hidden');
+            
+            // Set Relic UI Badge
+            const names = { sands: "Sands of Eternity", dial: "Paradox Dial", warp: "Warp Crystal" };
+            document.getElementById('relic-active-badge').innerText = `Relic: ${names[selectedRelic]}`;
+
+            sfx.init();
+            initStage(currentStage);
+            
+            // Start main loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        function initStage(stageNum) {
+            units = [];
+            temporalActionLog = [];
+            
+            // 1. Create 4 Main Heroes
+            units.push(new Unit('hero_1', 'Valen', false, 0, 1, 'striker'));
+            units.push(new Unit('hero_2', 'Aethel Guard', false, 0, 3, 'vanguard'));
+            units.push(new Unit('hero_3', 'Weaver', false, 1, 2, 'weaver'));
+            units.push(new Unit('hero_4', 'Mender', false, 1, 4, 'mender'));
+
+            // 2. Create Enemies based on stage
+            if (stageNum === 1) {
+                units.push(new Unit('enemy_1', 'Shadow Anomaly A', true, 6, 1));
+                units.push(new Unit('enemy_2', 'Shadow Anomaly B', true, 6, 4));
+                units.push(new Unit('enemy_3', 'Temporal Stalker', true, 7, 2));
+                document.getElementById('stage-name-display').innerText = "Stage 1: Chronos Anomaly";
+            } else {
+                units.push(new Unit('boss', 'Chronos Core Fragment', 'boss', 6, 2));
+                units.push(new Unit('enemy_1', 'Time Echo Guard A', true, 5, 1));
+                units.push(new Unit('enemy_2', 'Time Echo Guard B', true, 5, 4));
+                document.getElementById('stage-name-display').innerText = "Stage 2: Chronos Core Boss";
+            }
+
+            activeUnitIndex = 0;
+            currentActionMode = 'none';
+            buildHeroPartyBar();
+            updateUI();
+            logMessage(`Battle initiated! Relic [${selectedRelic.toUpperCase()}] active.`);
+        }
+
+        /* ==========================================================================
+           UI BUILDERS & LOGGERS
+           ========================================================================== */
+        function logMessage(msg) {
+            const logBox = document.getElementById('combat-log');
+            const entry = document.createElement('div');
+            entry.innerText = `> ${msg}`;
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function spawnFloatingText(text, x, y, color = '#38bdf8') {
+            floatingTexts.push({
+                text: text,
+                x: x,
+                y: y,
+                color: color,
+                alpha: 1.0,
+                life: 60
+            });
+        }
+
+        function buildHeroPartyBar() {
+            const bar = document.getElementById('hero-party-bar');
+            bar.innerHTML = '';
+
+            const heroes = units.filter(u => !u.isEnemy && !u.isEcho);
+            heroes.forEach((h, index) => {
+                const btn = document.createElement('button');
+                btn.className = `px-3 py-1.5 rounded-lg border flex items-center gap-1.5 text-xs font-semibold transition ${
+                    units[activeUnitIndex] === h 
+                    ? 'bg-cyan-950 border-cyan-400 text-cyan-200 shadow-md' 
+                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'
+                }`;
+                btn.onclick = () => selectActiveHero(h);
+                btn.innerHTML = `<span>${h.icon}</span> <span>${h.name}</span>`;
+                bar.appendChild(btn);
+            });
+        }
+
+        function selectActiveHero(unit) {
+            if (units[activeUnitIndex].isEnemy) return;
+            const newIdx = units.indexOf(unit);
+            if (newIdx !== -1) {
+                activeUnitIndex = newIdx;
+                currentActionMode = 'none';
+                updateUI();
+                buildHeroPartyBar();
+            }
+        }
+
+        function updateUI() {
+            const unit = units[activeUnitIndex];
+            if (!unit) return;
+
+            // Timeline Queue Badge Render
+            const tQueue = document.getElementById('timeline-queue');
+            tQueue.innerHTML = '';
+            units.forEach((u, i) => {
+                const badge = document.createElement('div');
+                const isActive = i === activeUnitIndex;
+                badge.className = `px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
+                    isActive 
+                    ? 'bg-amber-400 text-slate-950 ring-2 ring-amber-300' 
+                    : u.isEnemy ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-slate-800 text-slate-300'
+                }`;
+                badge.innerHTML = `${u.icon} ${u.name.split(' ')[0]}`;
+                tQueue.appendChild(badge);
+            });
+
+            // Update Active Unit Card
+            document.getElementById('unit-icon').innerText = unit.icon;
+            document.getElementById('unit-name').innerText = unit.name;
+            document.getElementById('unit-role').innerText = unit.role;
+            document.getElementById('unit-hp-text').innerText = `${Math.max(0, unit.hp)} / ${unit.maxHp}`;
+            document.getElementById('unit-hp-bar').style.width = `${Math.max(0, (unit.hp / unit.maxHp) * 100)}%`;
+            
+            document.getElementById('unit-shield-text').innerText = unit.shield;
+            document.getElementById('unit-shield-bar').style.width = `${Math.min(100, (unit.shield / 50) * 100)}%`;
+
+            document.getElementById('unit-ap-text').innerText = `${unit.ap} / ${unit.maxAp}`;
+
+            const turnBadge = document.getElementById('unit-turn-badge');
+            if (unit.isEnemy) {
+                turnBadge.className = "px-2 py-0.5 rounded text-[10px] bg-rose-950 text-rose-300 font-bold border border-rose-700";
+                turnBadge.innerText = "ENEMY TURN";
+            } else {
+                turnBadge.className = "px-2 py-0.5 rounded text-[10px] bg-cyan-950 text-cyan-300 font-bold border border-cyan-700";
+                turnBadge.innerText = "PLAYER TURN";
+            }
+
+            // Update Echo Stream UI
+            const echoList = document.getElementById('echo-log-list');
+            echoList.innerHTML = '';
+            const activeLogs = temporalActionLog.filter(l => l.unitId === unit.id);
+            document.getElementById('echo-count-badge').innerText = `${activeLogs.length} Recorded`;
+
+            if (activeLogs.length === 0) {
+                echoList.innerHTML = `<div class="text-slate-500 italic text-center py-2">No past actions recorded in turn history.</div>`;
+            } else {
+                activeLogs.forEach(l => {
+                    const item = document.createElement('div');
+                    item.className = "bg-slate-900 border border-purple-900/50 p-1.5 rounded text-[10px] flex justify-between items-center text-purple-200";
+                    item.innerHTML = `<span><i class="fa-solid fa-clock-rotate-left text-cyan-400"></i> ${l.actionType.toUpperCase()} @ (${l.targetCol},${l.targetRow})</span> <span class="text-purple-400 font-bold">READY</span>`;
+                    echoList.appendChild(item);
+                });
+            }
+
+            // Button highlights
+            document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('ring-2', 'ring-cyan-400'));
+            if (currentActionMode !== 'none') {
+                const activeBtn = document.getElementById(`btn-${currentActionMode}`);
+                if (activeBtn) activeBtn.classList.add('ring-2', 'ring-cyan-400');
+            }
+        }
+
+        /* ==========================================================================
+           GAME MECHANICS & ACTIONS
+           ========================================================================== */
+        function setActionState(mode) {
+            const unit = units[activeUnitIndex];
+            if (unit.isEnemy) return;
+
+            if (mode === 'skill' && unit.ap < unit.skillDesc) {
+                logMessage(`Not enough AP for ${unit.skillName}!`);
+            }
+            
+            currentActionMode = (currentActionMode === mode) ? 'none' : mode;
+            updateUI();
+        }
+
+        function handleCanvasClick(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+
+            const targetCol = Math.floor(clickX / TILE_SIZE);
+            const targetRow = Math.floor(clickY / TILE_SIZE);
+
+            if (targetCol < 0 || targetCol >= GRID_COLS || targetRow < 0 || targetRow >= GRID_ROWS) return;
+
+            const currentUnit = units[activeUnitIndex];
+            if (currentUnit.isEnemy || currentUnit.ap <= 0) return;
+
+            // Execute based on active action mode
+            if (currentActionMode === 'move') {
+                executeMove(currentUnit, targetCol, targetRow);
+            } else if (currentActionMode === 'attack') {
+                executeAttack(currentUnit, targetCol, targetRow);
+            } else if (currentActionMode === 'skill') {
+                executeSkill(currentUnit, targetCol, targetRow);
+            } else {
+                // Select unit on tile if any
+                const clickedUnit = units.find(u => u.col === targetCol && u.row === targetRow);
+                if (clickedUnit && !clickedUnit.isEnemy) {
+                    selectActiveHero(clickedUnit);
+                }
+            }
+        }
+
+        function executeMove(unit, col, row) {
+            // Check tile occupancy
+            const occupant = units.find(u => u.col === col && u.row === row);
+            if (occupant) {
+                logMessage(`Tile (${col}, ${row}) is already occupied!`);
+                return;
+            }
+
+            const dist = Math.abs(unit.col - col) + Math.abs(unit.row - row);
+            if (dist > 3) {
+                logMessage(`Destination out of movement range!`);
+                return;
+            }
+
+            unit.col = col;
+            unit.row = row;
+            unit.ap -= 1;
+
+            // Log Action for Echo System
+            recordTemporalAction(unit.id, 'move', col, row);
+
+            sfx.playTone(300, 'sine', 0.1);
+            logMessage(`${unit.name} moved to (${col}, ${row}).`);
+            currentActionMode = 'none';
+            updateUI();
+            buildHeroPartyBar();
+        }
+
+        function executeAttack(unit, col, row) {
+            const target = units.find(u => u.col === col && u.row === row && u.isEnemy);
+            if (!target) {
+                logMessage(`No enemy target at tile (${col}, ${row})!`);
+                return;
+            }
+
+            const dist = Math.abs(unit.col - col) + Math.abs(unit.row - row);
+            if (dist > 2) {
+                logMessage(`Target out of attack range!`);
+                return;
+            }
+
+            unit.ap -= 1;
+            let dmg = unit.atk;
+
+            // Apply Damage
+            applyDamage(target, dmg);
+            sfx.playAttack();
+            spawnParticles((col + 0.5) * TILE_SIZE, (row + 0.5) * TILE_SIZE, '#f43f5e');
+            spawnFloatingText(`-${dmg}`, (col + 0.5) * TILE_SIZE, (row + 0.2) * TILE_SIZE, '#f43f5e');
+
+            // Record for Echo
+            recordTemporalAction(unit.id, 'attack', col, row);
+
+            logMessage(`${unit.name} attacked ${target.name} for ${dmg} DMG!`);
+            currentActionMode = 'none';
+            updateUI();
+            checkVictoryDefeat();
+        }
+
+        function executeSkill(unit, col, row) {
+            if (unit.ap < 2) {
+                logMessage(`Requires 2 AP to use Class Skill!`);
+                return;
+            }
+
+            unit.ap -= 2;
+            sfx.playSkill();
+
+            if (unit.classKey === 'striker') {
+                // Valen: Burst Attack + AP Bonus
+                const target = units.find(u => u.col === col && u.row === row && u.isEnemy);
+                if (target) {
+                    applyDamage(target, 50);
+                    unit.ap += 1; // Bonus AP
+                    spawnParticles((col + 0.5) * TILE_SIZE, (row + 0.5) * TILE_SIZE, '#38bdf8');
+                    spawnFloatingText(`50 STRIKE!`, (col + 0.5) * TILE_SIZE, (row + 0.2) * TILE_SIZE, '#38bdf8');
+                    logMessage(`${unit.name} used ${unit.skillName}! Dealt 50 DMG & gained +1 AP.`);
+                }
+            } else if (unit.classKey === 'vanguard') {
+                // Aethel Guard: Party Shield
+                units.filter(u => !u.isEnemy).forEach(h => {
+                    h.shield += 40;
+                    spawnFloatingText(`+40 SHIELD`, (h.col + 0.5) * TILE_SIZE, (h.row + 0.2) * TILE_SIZE, '#fbbf24');
+                });
+                logMessage(`${unit.name} cast ${unit.skillName}! Granted +40 Shield to all heroes.`);
+            } else if (unit.classKey === 'weaver') {
+                // Aether Weaver: Freeze Enemy
+                const target = units.find(u => u.col === col && u.row === row && u.isEnemy);
+                if (target) {
+                    target.isFrozen = true;
+                    spawnParticles((col + 0.5) * TILE_SIZE, (row + 0.5) * TILE_SIZE, '#a855f7');
+                    spawnFloatingText(`STASIS FROZEN`, (col + 0.5) * TILE_SIZE, (row + 0.2) * TILE_SIZE, '#a855f7');
+                    logMessage(`${unit.name} froze ${target.name} in stasis! Target turn skipped.`);
+                }
+            } else if (unit.classKey === 'mender') {
+                // Void Mender: Rewind HP Heal
+                sfx.playHeal();
+                units.filter(u => !u.isEnemy).forEach(h => {
+                    h.hp = Math.min(h.maxHp, h.hp + 40);
+                    spawnFloatingText(`+40 HEAL`, (h.col + 0.5) * TILE_SIZE, (h.row + 0.2) * TILE_SIZE, '#34d399');
+                });
+                logMessage(`${unit.name} rewound time! Party restored +40 HP.`);
+            }
+
+            currentActionMode = 'none';
+            updateUI();
+            checkVictoryDefeat();
+        }
+
+        /* ==========================================================================
+           CORE MECHANIC: THE ECHO SYSTEM & RECORDING
+           ========================================================================== */
+        function recordTemporalAction(unitId, type, col, row) {
+            temporalActionLog.push({
+                unitId: unitId,
+                actionType: type,
+                targetCol: col,
+                targetRow: row,
+                turnTimestamp: Date.now()
+            });
+        }
+
+        function triggerSummonEcho() {
+            const currentUnit = units[activeUnitIndex];
+            if (currentUnit.isEnemy || currentUnit.ap < 1) {
+                logMessage(`Cannot summon Echo! Requires 1 AP.`);
+                return;
+            }
+
+            const pastLogs = temporalActionLog.filter(l => l.unitId === currentUnit.id);
+            if (pastLogs.length === 0) {
+                logMessage(`No temporal actions recorded to create an Echo replica!`);
+                return;
+            }
+
+            currentUnit.ap -= 1;
+            sfx.playEchoSummon();
+
+            // Create Echo Ghost Unit
+            const echoUnit = new Unit(
+                `echo_${Date.now()}`,
+                `Echo of ${currentUnit.name}`,
+                false,
+                currentUnit.col,
+                currentUnit.row
+            );
+            echoUnit.isEcho = true;
+            echoUnit.icon = "👻";
+            echoUnit.color = "#c084fc"; // Translucent Purple
+            echoUnit.maxHp = 40;
+            echoUnit.hp = 40;
+            echoUnit.atk = Math.round(currentUnit.atk * (selectedRelic === 'sands' ? 1.25 : 1.0));
+
+            units.push(echoUnit);
+
+            spawnParticles((currentUnit.col + 0.5) * TILE_SIZE, (currentUnit.row + 0.5) * TILE_SIZE, '#c084fc');
+            spawnFloatingText(`ECHO REPLICA SUMMONED!`, (currentUnit.col + 0.5) * TILE_SIZE, (currentUnit.row + 0.2) * TILE_SIZE, '#c084fc');
+            logMessage(`SUMMONED ECHO REPLICA! Replaying stored turn sequence...`);
+
+            // Instantly execute recorded attack sequence with Sync Combo Overlap
+            pastLogs.forEach(action => {
+                if (action.actionType === 'attack') {
+                    const target = units.find(u => u.col === action.targetCol && u.row === action.targetRow && u.isEnemy);
+                    if (target) {
+                        applyDamage(target, echoUnit.atk);
+                        spawnFloatingText(`SYNC OVERLAP -${echoUnit.atk}`, (target.col + 0.5) * TILE_SIZE, (target.row + 0.1) * TILE_SIZE, '#a855f7');
+                        logMessage(`[SYNC COMBO]: Echo replayed attack on ${target.name} for ${echoUnit.atk} DMG!`);
+                    }
+                }
+            });
+
+            // Clear log after replay
+            temporalActionLog = temporalActionLog.filter(l => l.unitId !== currentUnit.id);
+            updateUI();
+            checkVictoryDefeat();
+        }
+
+        function triggerRelicAbility() {
+            const currentUnit = units[activeUnitIndex];
+            if (currentUnit.isEnemy) return;
+
+            if (selectedRelic === 'warp') {
+                const echoUnit = units.find(u => u.isEcho);
+                if (echoUnit) {
+                    // Swap positions with Echo
+                    const tempC = currentUnit.col;
+                    const tempR = currentUnit.row;
+                    currentUnit.col = echoUnit.col;
+                    currentUnit.row = echoUnit.row;
+                    echoUnit.col = tempC;
+                    echoUnit.row = tempR;
+
+                    currentUnit.ap = Math.min(currentUnit.maxAp, currentUnit.ap + 1);
+                    sfx.playSkill();
+                    spawnFloatingText(`WARP SWAP!`, (currentUnit.col + 0.5) * TILE_SIZE, (currentUnit.row + 0.5) * TILE_SIZE, '#38bdf8');
+                    logMessage(`Warp Crystal triggered! Swapped position with Echo + restored 1 AP.`);
+                } else {
+                    logMessage(`No active Echo on field to swap positions with!`);
+                }
+            } else if (selectedRelic === 'sands') {
+                logMessage(`Sands of Eternity Passive: Echo attacks deal +25% extra Damage automatically.`);
+            } else if (selectedRelic === 'dial') {
+                logMessage(`Paradox Dial Passive: Triggers 150% recoil reflection upon Paradox burst.`);
+            }
+        }
+
+        /* ==========================================================================
+           DAMAGE & PARADOX RECOIL LOGIC
+           ========================================================================== */
+        function applyDamage(unit, damage) {
+            // Check shield first
+            if (unit.shield > 0) {
+                if (unit.shield >= damage) {
+                    unit.shield -= damage;
+                    damage = 0;
+                } else {
+                    damage -= unit.shield;
+                    unit.shield = 0;
+                }
+            }
+
+            unit.hp -= damage;
+
+            // Check if Echo destroyed -> Trigger Paradox Risk/Reward
+            if (unit.hp <= 0 && unit.isEcho) {
+                triggerParadoxBacklash(unit);
+            }
+
+            // Remove dead unit
+            if (unit.hp <= 0) {
+                units = units.filter(u => u !== unit);
+                logMessage(`${unit.name} was defeated!`);
+            }
+        }
+
+        function triggerParadoxBacklash(echoUnit) {
+            sfx.playParadox();
+            spawnParticles((echoUnit.col + 0.5) * TILE_SIZE, (echoUnit.row + 0.5) * TILE_SIZE, '#ef4444');
+            spawnFloatingText(`PARADOX BACKLASH!`, (echoUnit.col + 0.5) * TILE_SIZE, (echoUnit.row + 0.5) * TILE_SIZE, '#ef4444');
+
+            if (selectedRelic === 'dial') {
+                // Paradox Dial Relic: Reflect recoil to enemies
+                units.filter(u => u.isEnemy).forEach(e => {
+                    applyDamage(e, 35);
+                    spawnFloatingText(`PARADOX REFLECT -35`, (e.col + 0.5) * TILE_SIZE, (e.row + 0.2) * TILE_SIZE, '#fbbf24');
+                });
+                logMessage(`[PARADOX DIAL]: Reflected 35 Paradox damage to all enemies!`);
+            } else {
+                // Recoil damage to hero team
+                units.filter(u => !u.isEnemy && !u.isEcho).forEach(h => {
+                    h.hp -= 15;
+                    spawnFloatingText(`PARADOX -15`, (h.col + 0.5) * TILE_SIZE, (h.row + 0.2) * TILE_SIZE, '#ef4444');
+                });
+                logMessage(`[TEMPORAL PARADOX]: Echo destroyed before completion! Hero party suffered recoil damage.`);
+            }
+        }
+
+        /* ==========================================================================
+           TURN MANAGEMENT & ENEMY AI
+           ========================================================================== */
+        function endTurn() {
+            // Restore AP of active unit
+            const currentUnit = units[activeUnitIndex];
+            currentUnit.ap = currentUnit.maxAp;
+
+            // Advance Index
+            activeUnitIndex = (activeUnitIndex + 1) % units.length;
+            const nextUnit = units[activeUnitIndex];
+
+            // If Next Unit is Frozen by Weaver
+            if (nextUnit.isFrozen) {
+                nextUnit.isFrozen = false;
+                logMessage(`${nextUnit.name} is Frozen! Skipping turn.`);
+                endTurn();
+                return;
+            }
+
+            updateUI();
+            buildHeroPartyBar();
+
+            // Enemy Turn Execution
+            if (nextUnit.isEnemy) {
+                setTimeout(runEnemyAI, 600);
+            }
+        }
+
+        function runEnemyAI() {
+            const enemy = units[activeUnitIndex];
+            if (!enemy || !enemy.isEnemy) return;
+
+            // Find closest Hero target
+            const targets = units.filter(u => !u.isEnemy);
+            if (targets.length === 0) return;
+
+            // Simple Distance AI
+            let closest = targets[0];
+            let minDist = 999;
+            targets.forEach(t => {
+                const dist = Math.abs(enemy.col - t.col) + Math.abs(enemy.row - t.row);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closest = t;
+                }
+            });
+
+            // Move towards hero if far
+            if (minDist > 1) {
+                const dirC = closest.col > enemy.col ? 1 : closest.col < enemy.col ? -1 : 0;
+                const dirR = closest.row > enemy.row ? 1 : closest.row < enemy.row ? -1 : 0;
+
+                const targetC = enemy.col + dirC;
+                const targetR = enemy.row + dirR;
+
+                // Check collision
+                if (!units.some(u => u.col === targetC && u.row === targetR)) {
+                    enemy.col = targetC;
+                    enemy.row = targetR;
+                    logMessage(`${enemy.name} stalked forward to (${targetC}, ${targetR}).`);
+                }
+            }
+
+            // Attack if in range
+            if (Math.abs(enemy.col - closest.col) + Math.abs(enemy.row - closest.row) <= 1.5) {
+                sfx.playAttack();
+                applyDamage(closest, enemy.atk);
+                spawnParticles((closest.col + 0.5) * TILE_SIZE, (closest.row + 0.5) * TILE_SIZE, '#f43f5e');
+                spawnFloatingText(`-${enemy.atk}`, (closest.col + 0.5) * TILE_SIZE, (closest.row + 0.2) * TILE_SIZE, '#f43f5e');
+                logMessage(`${enemy.name} attacked ${closest.name} for ${enemy.atk} DMG!`);
+            }
+
+            checkVictoryDefeat();
+            setTimeout(endTurn, 500);
+        }
+
+        function checkVictoryDefeat() {
+            const heroesLeft = units.filter(u => !u.isEnemy && !u.isEcho);
+            const enemiesLeft = units.filter(u => u.isEnemy);
+
+            if (enemiesLeft.length === 0) {
+                if (currentStage === 1) {
+                    logMessage(`STAGE 1 CLEARED! PREPARING CHRONOS CORE BOSS...`);
+                    currentStage = 2;
+                    setTimeout(() => initStage(2), 1200);
+                } else {
+                    alert("VICTORY! You have repaired the Chronos Core and restored the Timeline!");
+                    restartBattle();
+                }
+            } else if (heroesLeft.length === 0) {
+                alert("TIMELINE COLLAPSE! All heroes defeated. Time has been consumed by shadows.");
+                restartBattle();
+            }
+        }
+
+        function restartBattle() {
+            currentStage = 1;
+            document.getElementById('modal-overlay').classList.remove('hidden');
+        }
+
+        /* ==========================================================================
+           PARTICLE & RENDERING ENGINE (CANVAS 2D)
+           ========================================================================== */
+        function spawnParticles(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: (Math.random() - 0.5) * 6,
+                    radius: Math.random() * 4 + 2,
+                    color: color,
+                    alpha: 1.0,
+                    life: 30
+                });
+            }
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Grid Lines & Holographic Floor
+            drawGrid();
+
+            // 2. Draw Movement/Attack Range Highlights
+            drawActionHighlights();
+
+            // 3. Render Units
+            units.forEach(unit => drawUnit(unit));
+
+            // 4. Update & Render Particles
+            updateParticles();
+
+            // 5. Update & Render Floating Combat Text
+            updateFloatingTexts();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = "rgba(30, 41, 59, 0.6)";
+            ctx.lineWidth = 1;
+
+            for (let c = 0; c <= GRID_COLS; c++) {
+                ctx.beginPath();
+                ctx.moveTo(c * TILE_SIZE, 0);
+                ctx.lineTo(c * TILE_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let r = 0; r <= GRID_ROWS; r++) {
+                ctx.beginPath();
+                ctx.moveTo(0, r * TILE_SIZE);
+                ctx.lineTo(canvas.width, r * TILE_SIZE);
+                ctx.stroke();
+            }
+        }
+
+        function drawActionHighlights() {
+            const activeUnit = units[activeUnitIndex];
+            if (!activeUnit || activeUnit.isEnemy) return;
+
+            if (currentActionMode === 'move') {
+                ctx.fillStyle = "rgba(6, 182, 212, 0.15)";
+                ctx.strokeStyle = "rgba(6, 182, 212, 0.5)";
+                for (let c = 0; c < GRID_COLS; c++) {
+                    for (let r = 0; r < GRID_ROWS; r++) {
+                        const dist = Math.abs(activeUnit.col - c) + Math.abs(activeUnit.row - r);
+                        if (dist <= 3 && !units.some(u => u.col === c && u.row === r)) {
+                            ctx.fillRect(c * TILE_SIZE + 2, r * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                            ctx.strokeRect(c * TILE_SIZE + 2, r * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        }
+                    }
+                }
+            } else if (currentActionMode === 'attack' || currentActionMode === 'skill') {
+                ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+                ctx.strokeStyle = "rgba(244, 63, 94, 0.5)";
+                units.filter(u => u.isEnemy).forEach(enemy => {
+                    ctx.fillRect(enemy.col * TILE_SIZE + 2, enemy.row * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                    ctx.strokeRect(enemy.col * TILE_SIZE + 2, enemy.row * TILE_SIZE + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                });
+            }
+        }
+
+        function drawUnit(unit) {
+            const centerX = (unit.col + 0.5) * TILE_SIZE;
+            const centerY = (unit.row + 0.5) * TILE_SIZE;
+            const radius = TILE_SIZE * 0.35;
+
+            // Highlight Active Unit Halo
+            if (units[activeUnitIndex] === unit) {
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius + 6, 0, Math.PI * 2);
+                ctx.strokeStyle = "#fbbf24";
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            // Unit Outer Glow Body
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fillStyle = unit.isEcho ? "rgba(192, 132, 252, 0.4)" : unit.color;
+            ctx.shadowColor = unit.color;
+            ctx.shadowBlur = 12;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Icon Sprite rendering
+            ctx.font = `${TILE_SIZE * 0.4}px sans-serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(unit.icon, centerX, centerY);
+
+            // Freeze Overlay Effect
+            if (unit.isFrozen) {
+                ctx.font = `${TILE_SIZE * 0.5}px sans-serif`;
+                ctx.fillText("❄️", centerX, centerY);
+            }
+
+            // Unit Health Mini Bar above head
+            const barW = TILE_SIZE * 0.7;
+            const barH = 5;
+            const barX = centerX - barW / 2;
+            const barY = centerY - radius - 10;
+
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(barX, barY, barW, barH);
+
+            const hpPercent = Math.max(0, unit.hp / unit.maxHp);
+            ctx.fillStyle = unit.isEnemy ? "#f43f5e" : "#10b981";
+            ctx.fillRect(barX, barY, barW * hpPercent, barH);
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 1 / p.life;
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function updateFloatingTexts() {
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const ft = floatingTexts[i];
+                ft.y -= 0.8;
+                ft.alpha -= 1 / ft.life;
+
+                if (ft.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = ft.alpha;
+                ctx.font = "bold 14px 'Exo 2', sans-serif";
+                ctx.fillStyle = ft.color;
+                ctx.textAlign = "center";
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+            }
+        }
+    </script>
+</body>
+</html>
